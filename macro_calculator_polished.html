@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Macro Calculator</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --text: #1f2937;
+      --muted: #5b6472;
+      --primary: #1d4ed8;
+      --primary-soft: #dbeafe;
+      --accent: #0f766e;
+      --accent-soft: #ccfbf1;
+      --warn: #92400e;
+      --warn-soft: #fef3c7;
+      --danger: #991b1b;
+      --danger-soft: #fee2e2;
+      --border: #d8e0ea;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(180deg, #eef4ff 0%, var(--bg) 100%);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 32px 20px 56px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #1d4ed8 0%, #0f766e 100%);
+      color: white;
+      border-radius: 22px;
+      padding: 28px;
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 820px;
+      color: rgba(255,255,255,0.92);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+
+    .card h2, .card h3 {
+      margin-top: 0;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px 16px;
+    }
+
+    .field label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .field input, .field select {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid #c7d3e0;
+      border-radius: 10px;
+      background: #fff;
+      font-size: 1rem;
+    }
+
+    .field small {
+      color: var(--muted);
+      display: block;
+      margin-top: 5px;
+    }
+
+    .button-row {
+      margin-top: 18px;
+    }
+
+    button {
+      border: 0;
+      background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+      color: white;
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 12px 18px;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(29, 78, 216, 0.22);
+    }
+
+    button:hover {
+      filter: brightness(1.03);
+    }
+
+    .results-box {
+      min-height: 120px;
+    }
+
+    .explain {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 12px;
+      background: #f8fbff;
+      border: 1px solid #d8e8ff;
+    }
+
+    .summary-chip {
+      display: inline-block;
+      background: var(--primary-soft);
+      color: #1e3a8a;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      margin: 0 8px 8px 0;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin-top: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #e5edf5;
+      text-align: left;
+    }
+
+    th {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      color: #1e3a8a;
+      font-size: 0.95rem;
+    }
+
+    tr:nth-child(even) td {
+      background: #fbfdff;
+    }
+
+    .highlight-row td {
+      background: linear-gradient(135deg, #dcfce7 0%, #ccfbf1 100%) !important;
+      font-weight: 700;
+    }
+
+    .bmi-underweight th { background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%); color: #9a3412; }
+    .bmi-healthy th { background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); color: #166534; }
+    .bmi-overweight th { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #92400e; }
+    .bmi-obesity th { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); color: #991b1b; }
+
+    .legend-list, .protein-list {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .footer-note {
+      margin-top: 22px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .source-box {
+      padding: 14px;
+      border-radius: 12px;
+      background: #fafcff;
+      border: 1px solid #dde7f3;
+      margin-top: 14px;
+    }
+
+    @media (max-width: 860px) {
+      .grid, .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .container {
+        padding: 20px 14px 40px;
+      }
+
+      .hero h1 {
+        font-size: 1.6rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <section class="hero">
+      <h1>Macro Calculator (US Units)</h1>
+      <p>
+        Enter your information below to estimate daily calories and protein, fat, and carbohydrate targets.
+        This calculator is for general educational use for adults and is not a substitute for individualized medical or nutrition advice.
+      </p>
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Your Information</h2>
+
+        <div class="form-grid">
+          <div class="field">
+            <label for="age">Age (years)</label>
+            <input type="number" id="age" min="18" max="100" step="1" placeholder="Example: 35">
+            <small>This calculator is intended for adults.</small>
+          </div>
+
+          <div class="field">
+            <label for="sex">Sex</label>
+            <select id="sex">
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="weight">Weight (lbs)</label>
+            <input type="number" id="weight" min="1" step="0.1" placeholder="Example: 180">
+          </div>
+
+          <div class="field">
+            <label for="height">Height (inches)</label>
+            <input type="number" id="height" min="1" step="0.1" placeholder="Example: 70">
+          </div>
+
+          <div class="field">
+            <label for="activity">Primary Activity</label>
+            <select id="activity">
+              <option value="walking">Walking</option>
+              <option value="aerobic">Aerobic</option>
+              <option value="lifting">Weightlifting</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="frequency">Sessions per week</label>
+            <select id="frequency">
+              <option value="1.20">1 to 2 days</option>
+              <option value="1.35">3 to 4 days</option>
+              <option value="1.50">5 to 6 days</option>
+              <option value="1.65">Every day</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="goal">Goal</label>
+            <select id="goal">
+              <option value="lose">Reduce Weight</option>
+              <option value="gain">Gain Muscle</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="button-row">
+          <button onclick="calculate()">Calculate</button>
+        </div>
+
+        <p class="footer-note">
+          Inputs are in US units. The calculator converts them internally for BMI and metabolism calculations.
+        </p>
+      </section>
+
+      <section class="card results-box">
+        <h2>Results</h2>
+        <div id="results">
+          <p class="muted">Your estimated daily targets will appear here after you click Calculate.</p>
+        </div>
+      </section>
+    </div>
+
+    <div class="grid" style="margin-top: 22px;">
+      <section class="card">
+        <h2>BMI Information</h2>
+        <div id="bmiTable">
+          <p class="muted">Your BMI and category will appear here after calculation.</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>CDC Adult BMI Categories</h2>
+        <div class="table-wrap">
+          <table>
+            <tr>
+              <th>Category</th>
+              <th>BMI Range</th>
+            </tr>
+            <tr>
+              <td>Underweight</td>
+              <td>Below 18.5</td>
+            </tr>
+            <tr>
+              <td>Healthy Weight</td>
+              <td>18.5 to 24.9</td>
+            </tr>
+            <tr>
+              <td>Overweight</td>
+              <td>25.0 to 29.9</td>
+            </tr>
+            <tr>
+              <td>Obesity</td>
+              <td>30.0 and above</td>
+            </tr>
+          </table>
+        </div>
+        <p class="footer-note">BMI is a screening measure and does not distinguish muscle from body fat.</p>
+      </section>
+    </div>
+
+    <section class="card" style="margin-top: 22px;">
+      <h2>Complete Protein Sources for Muscle Building</h2>
+      <p>
+        Complete proteins provide all nine essential amino acids. For building muscle, it can be useful to include
+        complete or high-quality protein sources regularly across meals.
+      </p>
+
+      <div class="grid" style="gap: 18px;">
+        <div class="source-box">
+          <h3>Animal-based complete proteins</h3>
+          <ul class="protein-list">
+            <li>Eggs</li>
+            <li>Dairy foods such as milk, Greek yogurt, and cottage cheese</li>
+            <li>Poultry such as chicken and turkey</li>
+            <li>Fish and seafood</li>
+            <li>Lean beef and other meats</li>
+            <li>Whey or casein protein powders</li>
+          </ul>
+        </div>
+
+        <div class="source-box">
+          <h3>Plant options</h3>
+          <ul class="protein-list">
+            <li>Soy foods such as tofu, tempeh, edamame, and soy protein</li>
+            <li>Quinoa</li>
+            <li>Chia seeds</li>
+            <li>Bean, lentil, grain, and nut combinations across the day can also help provide all essential amino acids</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="explain">
+        <strong>Simple muscle-building tip:</strong>
+        Try to spread protein across the day instead of eating almost all of it in one meal. The calculator’s protein target is a daily estimate; food choices and consistency still matter.
+      </div>
+
+      <p class="footer-note">
+        This section is informational and does not replace advice from a physician or registered dietitian, especially for people with kidney disease, pregnancy, diabetes, or other medical conditions.
+      </p>
+    </section>
+  </div>
+
+  <script>
+    function getBmiClass(category) {
+      if (category === "Underweight") return "bmi-underweight";
+      if (category === "Healthy Weight") return "bmi-healthy";
+      if (category === "Overweight") return "bmi-overweight";
+      return "bmi-obesity";
+    }
+
+    function calculate() {
+      const age = parseInt(document.getElementById('age').value, 10);
+      const sex = document.getElementById('sex').value;
+      const weightLbs = parseFloat(document.getElementById('weight').value);
+      const heightIn = parseFloat(document.getElementById('height').value);
+      const activity = document.getElementById('activity').value;
+      const goal = document.getElementById('goal').value;
+      const multiplier = parseFloat(document.getElementById('frequency').value);
+
+      if (!age || !weightLbs || !heightIn || age < 18 || weightLbs <= 0 || heightIn <= 0) {
+        document.getElementById('results').innerHTML =
+          "<p><strong>Please enter a valid age, weight, and height.</strong><br>This calculator is intended for adults.</p>";
+        document.getElementById('bmiTable').innerHTML =
+          "<p class='muted'>Your BMI and category will appear here after calculation.</p>";
+        return;
+      }
+
+      const weightKg = weightLbs * 0.45359237;
+      const heightCm = heightIn * 2.54;
+      const heightM = heightIn * 0.0254;
+
+      const bmi = weightKg / (heightM * heightM);
+      let bmiCategory = "";
+      if (bmi < 18.5) bmiCategory = "Underweight";
+      else if (bmi < 25) bmiCategory = "Healthy Weight";
+      else if (bmi < 30) bmiCategory = "Overweight";
+      else bmiCategory = "Obesity";
+
+      let bmr = 10 * weightKg + 6.25 * heightCm - 5 * age;
+      if (sex === "male") bmr += 5;
+      else bmr -= 161;
+
+      let activityAdj = 1.0;
+      if (activity === "aerobic") activityAdj = 1.05;
+      if (activity === "lifting") activityAdj = 1.08;
+
+      let calories = bmr * multiplier * activityAdj;
+      if (goal === "lose") calories -= 400;
+      if (goal === "gain") calories += 300;
+
+      let proteinPerKg = 1.5;
+      if (activity === "aerobic") proteinPerKg = 1.7;
+      if (activity === "lifting" || goal === "gain") proteinPerKg = 1.8;
+
+      const protein = weightKg * proteinPerKg;
+      const fat = (calories * 0.25) / 9;
+      const carbs = Math.max(0, (calories - (protein * 4 + fat * 9)) / 4);
+
+      const activityLabel = document.getElementById('activity').options[document.getElementById('activity').selectedIndex].text;
+      const goalLabel = document.getElementById('goal').options[document.getElementById('goal').selectedIndex].text;
+      const sexLabel = document.getElementById('sex').options[document.getElementById('sex').selectedIndex].text;
+      const frequencyLabel = document.getElementById('frequency').options[document.getElementById('frequency').selectedIndex].text;
+
+      document.getElementById('results').innerHTML = `
+        <div>
+          <span class="summary-chip">Age: ${age}</span>
+          <span class="summary-chip">Sex: ${sexLabel}</span>
+          <span class="summary-chip">Activity: ${activityLabel}</span>
+          <span class="summary-chip">Sessions: ${frequencyLabel}</span>
+          <span class="summary-chip">Goal: ${goalLabel}</span>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <tr>
+              <th>Measure</th>
+              <th>Value</th>
+            </tr>
+            <tr>
+              <td>Resting Calories (BMR)</td>
+              <td>${bmr.toFixed(0)} kcal</td>
+            </tr>
+            <tr class="highlight-row">
+              <td>Estimated Daily Calories</td>
+              <td>${calories.toFixed(0)} kcal</td>
+            </tr>
+            <tr>
+              <td>Protein</td>
+              <td>${protein.toFixed(1)} g</td>
+            </tr>
+            <tr>
+              <td>Fat</td>
+              <td>${fat.toFixed(1)} g</td>
+            </tr>
+            <tr>
+              <td>Carbohydrates</td>
+              <td>${carbs.toFixed(1)} g</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="explain">
+          <strong>Explanation</strong><br>
+          BMR is the estimated energy your body needs at complete rest.<br>
+          Estimated Daily Calories is your BMR adjusted for activity and then changed for your selected goal.
+        </div>
+      `;
+
+      document.getElementById('bmiTable').innerHTML = `
+        <div class="table-wrap">
+          <table class="${getBmiClass(bmiCategory)}">
+            <tr>
+              <th>BMI</th>
+              <th>Category</th>
+              <th>Reference Healthy Range</th>
+            </tr>
+            <tr>
+              <td>${bmi.toFixed(1)}</td>
+              <td>${bmiCategory}</td>
+              <td>18.5 to 24.9</td>
+            </tr>
+          </table>
+        </div>
+        <p class="footer-note">BMI is shown as context only and does not directly drive the macro recommendation.</p>
+      `;
+    }
+  </script>
+</body>
+</html>
