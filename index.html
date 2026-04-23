@@ -3,6 +3,605 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Health Tracker</title>
+  <style>
+    :root { --bg:#f4f7fb; --panel:#ffffff; --text:#1f2937; --muted:#5b6472; --primary:#1d4ed8; --primary-soft:#dbeafe; --accent:#0f766e; --border:#d8e0ea; --shadow:0 10px 30px rgba(15,23,42,0.08); --radius:16px; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Arial,sans-serif; background:linear-gradient(180deg,#eef4ff 0%,var(--bg) 100%); color:var(--text); line-height:1.5; }
+    .container { max-width:1160px; margin:0 auto; padding:32px 20px 56px; }
+    .hero { background:linear-gradient(135deg,#1d4ed8 0%,#0f766e 100%); color:white; border-radius:22px; padding:28px; box-shadow:var(--shadow); margin-bottom:24px; }
+    .hero h1 { margin:0 0 8px; font-size:2rem; }
+    .hero p { margin:0; max-width:860px; color:rgba(255,255,255,0.92); }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:22px; align-items:start; }
+    .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+    .card { background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:22px; }
+    .card h2, .card h3 { margin-top:0; }
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 16px; }
+    .field label { display:block; font-weight:700; margin-bottom:6px; }
+    .field input, .field select, .field textarea { width:100%; padding:11px 12px; border:1px solid #c7d3e0; border-radius:10px; background:#fff; font-size:1rem; font-family:inherit; }
+    .field small { color:var(--muted); display:block; margin-top:5px; }
+    .button-row { margin-top:18px; display:flex; gap:10px; flex-wrap:wrap; }
+    button { border:0; background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 100%); color:white; font-size:1rem; font-weight:700; padding:12px 18px; border-radius:12px; cursor:pointer; box-shadow:0 8px 20px rgba(29,78,216,0.22); }
+    button.secondary { background:linear-gradient(135deg,#0f766e 0%,#0d9488 100%); box-shadow:0 8px 20px rgba(15,118,110,0.22); }
+    button.ghost { background:linear-gradient(135deg,#64748b 0%,#475569 100%); box-shadow:0 8px 20px rgba(71,85,105,0.18); }
+    .small-btn { padding:8px 10px; font-size:0.85rem; }
+    .results-box { min-height:120px; }
+    .explain { margin-top:14px; padding:14px; border-radius:12px; background:#f8fbff; border:1px solid #d8e8ff; }
+    .summary-chip { display:inline-block; background:var(--primary-soft); color:#1e3a8a; padding:6px 10px; border-radius:999px; font-size:0.92rem; font-weight:700; margin:0 8px 8px 0; }
+    .metric-card { padding:16px; border-radius:14px; background:linear-gradient(135deg,#eff6ff 0%,#f8fafc 100%); border:1px solid #dbeafe; }
+    .metric-card strong { display:block; font-size:1.4rem; margin-top:6px; color:#1e3a8a; }
+    .table-wrap { overflow-x:auto; margin-top:14px; }
+    table { width:100%; border-collapse:collapse; border-radius:14px; overflow:hidden; }
+    th, td { padding:12px 14px; border-bottom:1px solid #e5edf5; text-align:left; vertical-align:top; }
+    th { background:linear-gradient(135deg,#dbeafe 0%,#bfdbfe 100%); color:#1e3a8a; font-size:0.95rem; }
+    tr:nth-child(even) td { background:#fbfdff; }
+    .highlight-row td { background:linear-gradient(135deg,#dcfce7 0%,#ccfbf1 100%) !important; font-weight:700; }
+    .bmi-underweight th { background:linear-gradient(135deg,#fff7ed 0%,#fed7aa 100%); color:#9a3412; }
+    .bmi-healthy th { background:linear-gradient(135deg,#dcfce7 0%,#bbf7d0 100%); color:#166534; }
+    .bmi-overweight th { background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%); color:#92400e; }
+    .bmi-obesity th { background:linear-gradient(135deg,#fee2e2 0%,#fecaca 100%); color:#991b1b; }
+    .protein-list { margin:0; padding-left:18px; }
+    .muted { color:var(--muted); }
+    .footer-note { margin-top:22px; color:var(--muted); font-size:0.95rem; }
+    .source-box { padding:14px; border-radius:12px; background:#fafcff; border:1px solid #dde7f3; margin-top:14px; }
+    .calendar-table th { background:linear-gradient(135deg,#ccfbf1 0%,#bfdbfe 100%); color:#134e4a; }
+    .good { color:#166534; font-weight:700; }
+    .warn { color:#92400e; font-weight:700; }
+    .coaching-box { margin-top:14px; padding:14px; border-radius:12px; background:#f0fdf4; border:1px solid #bbf7d0; }
+    .month-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+    .month-title { font-size:1.2rem; font-weight:700; color:#1e3a8a; }
+    .month-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; }
+    .day-name { font-size:0.85rem; font-weight:700; color:var(--muted); text-align:center; padding:6px 0; }
+    .calendar-day { min-height:110px; border:1px solid #dbe3ef; border-radius:12px; background:#fff; padding:8px; cursor:pointer; }
+    .calendar-day:hover { border-color:#93c5fd; box-shadow:0 4px 12px rgba(37,99,235,0.10); }
+    .calendar-day.other-month { background:#f8fafc; color:#94a3b8; }
+    .calendar-day.selected { border:2px solid #2563eb; background:#eff6ff; }
+    .calendar-day .day-num { font-weight:700; margin-bottom:6px; }
+    .calendar-mark { display:block; font-size:0.78rem; border-radius:999px; padding:2px 8px; margin-top:4px; width:fit-content; }
+    .mark-activity { background:#dcfce7; color:#166534; }
+    .mark-meal { background:#fef3c7; color:#92400e; }
+    .mark-weight { background:#dbeafe; color:#1d4ed8; }
+    .comparison-box { margin-top:14px; padding:14px; border-radius:12px; background:#fafcff; border:1px solid #dde7f3; }
+    .comparison-row { margin-bottom:14px; }
+    .comparison-top { display:flex; justify-content:space-between; gap:12px; font-size:0.95rem; margin-bottom:6px; }
+    .progress-track { width:100%; height:12px; background:#e5edf5; border-radius:999px; overflow:hidden; }
+    .progress-fill { height:100%; background:linear-gradient(135deg,#1d4ed8 0%,#0f766e 100%); border-radius:999px; }
+    @media (max-width:920px) { .grid, .form-grid, .grid-3 { grid-template-columns:1fr; } .container { padding:20px 14px 40px; } .hero h1 { font-size:1.6rem; } .calendar-day { min-height:90px; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <section class="hero">
+      <h1>Health Tracker</h1>
+      <p>Enter your information below to estimate daily calories and protein, fat, and carbohydrate targets. Then use the activity and meal tracker to log daily entries, estimate calorie balance, and review weekly progress. This calculator is for general educational use for adults and is not a substitute for individualized medical or nutrition advice.</p>
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Your Information</h2>
+        <div class="form-grid">
+          <div class="field"><label for="age">Age (years)</label><input type="number" id="age" min="18" max="100" step="1" placeholder="Example: 35"><small>This calculator is intended for adults.</small></div>
+          <div class="field"><label for="sex">Sex</label><select id="sex"><option value="male">Male</option><option value="female">Female</option></select></div>
+          <div class="field"><label for="weight">Weight (lbs)</label><input type="number" id="weight" min="1" step="0.1" placeholder="Example: 180"></div>
+          <div class="field"><label for="height">Height (inches)</label><input type="number" id="height" min="1" step="0.1" placeholder="Example: 70"></div>
+          <div class="field"><label for="activity">Primary Activity</label><select id="activity"><option value="walking">Walking</option><option value="aerobic">Aerobic</option><option value="lifting">Weightlifting</option></select></div>
+          <div class="field"><label for="frequency">Sessions per week</label><select id="frequency"><option value="1.20">1 to 2 days</option><option value="1.35">3 to 4 days</option><option value="1.50">5 to 6 days</option><option value="1.65">Every day</option></select></div>
+          <div class="field"><label for="goal">Goal</label><select id="goal"><option value="lose">Reduce Weight</option><option value="gain">Gain Muscle</option></select></div>
+        </div>
+        <div class="button-row"><button onclick="calculate()">Calculate</button></div>
+        <p class="footer-note">Inputs are in US units. The calculator converts them internally for BMI and metabolism calculations.</p>
+      </section>
+
+      <section class="card results-box">
+        <h2>Daily Targets</h2>
+        <div id="results"><p class="muted">Your estimated daily targets will appear here after you click Calculate.</p></div>
+      </section>
+    </div>
+
+    <div class="grid" style="margin-top:22px;">
+      <section class="card">
+        <h2>BMI Information</h2>
+        <div id="bmiTable"><p class="muted">Your BMI and category will appear here after calculation.</p></div>
+      </section>
+      <section class="card">
+        <h2>CDC Adult BMI Categories</h2>
+        <div class="table-wrap"><table><tr><th>Category</th><th>BMI Range</th></tr><tr><td>Underweight</td><td>Below 18.5</td></tr><tr><td>Healthy Weight</td><td>18.5 to 24.9</td></tr><tr><td>Overweight</td><td>25.0 to 29.9</td></tr><tr><td>Obesity</td><td>30.0 and above</td></tr></table></div>
+        <p class="footer-note">BMI is a screening measure and does not distinguish muscle from body fat.</p>
+      </section>
+    </div>
+
+    <section class="card" style="margin-top:22px;">
+      <h2>Complete Protein Sources for Muscle Building</h2>
+      <p>Complete proteins provide all nine essential amino acids. For building muscle, it can be useful to include complete or high-quality protein sources regularly across meals.</p>
+      <div class="grid" style="gap:18px;">
+        <div class="source-box"><h3>Animal-based complete proteins</h3><ul class="protein-list"><li>Eggs (~3–4 g protein per oz)</li><li>Greek yogurt (~3 g per oz)</li><li>Milk (~1 g per oz)</li><li>Chicken breast (~8–9 g per oz)</li><li>Turkey (~8 g per oz)</li><li>Fish (salmon, tuna) (~6–7 g per oz)</li><li>Lean beef (~7 g per oz)</li><li>Whey protein (~7–8 g per oz)</li></ul></div>
+        <div class="source-box"><h3>Plant options</h3><ul class="protein-list"><li>Tofu (~2–3 g per oz)</li><li>Tempeh (~5 g per oz)</li><li>Edamame (~3 g per oz)</li><li>Quinoa (~1–2 g per oz cooked)</li><li>Chia seeds (~4–5 g per oz)</li><li>Beans/lentils (~2–3 g per oz cooked)</li></ul></div>
+      </div>
+      <div class="explain"><strong>Simple muscle-building tip:</strong> Try to spread protein across the day instead of eating almost all of it in one meal. The calculator’s protein target is a daily estimate; food choices and consistency still matter.</div>
+      <div class="source-box" style="margin-top:22px;">
+        <h2>Benefits of Weightlifting and Building Muscle</h2>
+        <p>Strength training, also known as weightlifting, provides a wide range of health benefits beyond just increasing muscle size.</p>
+        <ul><li>Builds muscle strength and lean body mass</li><li>Helps maintain or increase metabolism, supporting weight management</li><li>Improves bone density and reduces risk of osteoporosis</li><li>Enhances balance, coordination, and overall physical function</li><li>Supports joint health and may reduce risk of injury</li><li>Can improve mental health, confidence, and overall well-being</li><li>May help reduce long-term medical expenses by lowering risk of chronic conditions such as heart disease, diabetes, and mobility-related issues</li></ul>
+        <p>According to the Mayo Clinic, strength training can play an important role in overall health and fitness, helping people stay active and independent as they age.</p>
+        <p><a href="https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/strength-training/art-20046670" target="_blank">Read more from the Mayo Clinic</a></p>
+      </div>
+      <p class="footer-note">This section is informational and does not replace advice from a physician or registered dietitian, especially for people with kidney disease, pregnancy, diabetes, or other medical conditions.</p>
+    </section>
+
+    <section class="card" style="margin-top:22px;">
+      <h2>Month View Calendar</h2>
+      <p class="muted">Click any day to make it the active date for daily summaries and new log entries.</p>
+      <div class="month-header"><button class="ghost small-btn" onclick="changeMonth(-1)">Previous</button><div class="month-title" id="monthTitle"></div><button class="ghost small-btn" onclick="changeMonth(1)">Next</button></div>
+      <div class="month-grid" id="monthGrid"></div>
+    </section>
+
+    <div class="grid" style="margin-top:22px;">
+      <section class="card">
+        <h2>Daily Activity</h2>
+        <p class="muted">Log exercise or movement for a selected date.</p>
+        <div class="form-grid">
+          <div class="field"><label for="activityDate">Date</label><input type="date" id="activityDate"></div>
+          <div class="field"><label for="activityName">Activity Name</label><input type="text" id="activityName" placeholder="Example: Walking"></div>
+          <div class="field"><label for="activityKind">Activity Kind</label><select id="activityKind"><option value="walking">Walking</option><option value="aerobic">Aerobic</option><option value="weightlifting">Weightlifting</option></select></div>
+          <div class="field"><label for="activityMinutes">Minutes of Activity</label><input type="number" id="activityMinutes" min="0" step="1" placeholder="Example: 45"></div>
+          <div class="field" style="grid-column:1 / -1;"><label for="activityNotes">Notes</label><textarea id="activityNotes" rows="2" placeholder="Optional details"></textarea></div>
+        </div>
+        <div class="button-row"><button class="secondary" onclick="addActivityEntry()">Add Activity</button></div>
+      </section>
+
+      <section class="card">
+        <h2>Daily Meals</h2>
+        <p class="muted">Log meals by macronutrients for a selected date. Calories are calculated automatically from protein, carbs, and fat.</p>
+        <div class="form-grid">
+          <div class="field"><label for="mealDate">Date</label><input type="date" id="mealDate"></div>
+          <div class="field"><label for="mealName">Meal Name</label><input type="text" id="mealName" placeholder="Example: Breakfast"></div>
+          <div class="field"><label for="mealProtein">Protein (g)</label><input type="number" id="mealProtein" min="0" step="1" placeholder="Example: 30"></div>
+          <div class="field"><label for="mealCarbs">Carbohydrates (g)</label><input type="number" id="mealCarbs" min="0" step="1" placeholder="Example: 45"></div>
+          <div class="field"><label for="mealFat">Fat (g)</label><input type="number" id="mealFat" min="0" step="1" placeholder="Example: 15"></div>
+          <div class="field"><label for="mealNotes">Notes</label><textarea id="mealNotes" rows="2" placeholder="Optional details"></textarea></div>
+        </div>
+        <div class="button-row"><button class="secondary" onclick="addMealEntry()">Add Meal</button></div>
+      </section>
+    </div>
+
+    <div class="grid" style="margin-top:22px;">
+      <section class="card">
+        <h2>Weight Check-In</h2>
+        <p class="muted">Use this to track progress over time.</p>
+        <div class="form-grid">
+          <div class="field"><label for="weightDate">Date</label><input type="date" id="weightDate"></div>
+          <div class="field"><label for="weightEntry">Body Weight (lbs)</label><input type="number" id="weightEntry" min="0" step="0.1" placeholder="Example: 178.5"></div>
+          <div class="field" style="grid-column:1 / -1;"><label for="weightNotes">Notes</label><textarea id="weightNotes" rows="2" placeholder="Optional details"></textarea></div>
+        </div>
+        <div class="button-row"><button class="secondary" onclick="addWeightEntry()">Add Weight Check-In</button><button class="ghost" onclick="clearAllEntries()">Clear All Entries</button></div>
+      </section>
+
+      <section class="card">
+        <h2>Daily Summary</h2>
+        <div class="field"><label for="summaryDate">View Date</label><input type="date" id="summaryDate" onchange="syncSelectedDate(this.value)"></div>
+        <div id="dailySummary"><p class="muted">Choose a date and add entries to see your daily summary.</p></div>
+      </section>
+    </div>
+
+    <div class="grid" style="margin-top:22px;">
+      <section class="card"><h2>Weekly Progress</h2><div id="weeklySummary"><p class="muted">Weekly progress will appear after you add dated entries.</p></div></section>
+      <section class="card"><h2>Logged Entries</h2><div id="entriesTable"><p class="muted">No entries yet.</p></div></section>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'healthTrackerEntriesV5';
+    let currentTargets = null;
+    let selectedDate = todayISO();
+    let currentCalendarDate = new Date();
+
+    function todayISO() {
+      const d = new Date();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${d.getFullYear()}-${m}-${day}`;
+    }
+    function getEntries() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch (e) { return []; }
+    }
+    function saveEntries(entries) { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
+    function isoFromDate(dateObj) {
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      return `${dateObj.getFullYear()}-${m}-${d}`;
+    }
+    function setInputDates(dateStr) {
+      document.getElementById('activityDate').value = dateStr;
+      document.getElementById('mealDate').value = dateStr;
+      document.getElementById('weightDate').value = dateStr;
+      document.getElementById('summaryDate').value = dateStr;
+    }
+    function syncSelectedDate(dateStr) {
+      if (!dateStr) return;
+      selectedDate = dateStr;
+      const d = new Date(dateStr + 'T12:00:00');
+      currentCalendarDate = new Date(d.getFullYear(), d.getMonth(), 1);
+      setInputDates(dateStr);
+      renderTracker();
+      renderMonthCalendar();
+    }
+    function getBmiClass(category) {
+      if (category === 'Underweight') return 'bmi-underweight';
+      if (category === 'Healthy Weight') return 'bmi-healthy';
+      if (category === 'Overweight') return 'bmi-overweight';
+      return 'bmi-obesity';
+    }
+    function calculate() {
+      const age = parseInt(document.getElementById('age').value, 10);
+      const sex = document.getElementById('sex').value;
+      const weightLbs = parseFloat(document.getElementById('weight').value);
+      const heightIn = parseFloat(document.getElementById('height').value);
+      const activity = document.getElementById('activity').value;
+      const goal = document.getElementById('goal').value;
+      const multiplier = parseFloat(document.getElementById('frequency').value);
+
+      if (!age || !weightLbs || !heightIn || age < 18 || weightLbs <= 0 || heightIn <= 0) {
+        document.getElementById('results').innerHTML = "<p><strong>Please enter a valid age, weight, and height.</strong><br>This calculator is intended for adults.</p>";
+        document.getElementById('bmiTable').innerHTML = "<p class='muted'>Your BMI and category will appear here after calculation.</p>";
+        return;
+      }
+
+      const weightKg = weightLbs * 0.45359237;
+      const heightCm = heightIn * 2.54;
+      const heightM = heightIn * 0.0254;
+      const bmi = weightKg / (heightM * heightM);
+
+      let bmiCategory = '';
+      if (bmi < 18.5) bmiCategory = 'Underweight';
+      else if (bmi < 25) bmiCategory = 'Healthy Weight';
+      else if (bmi < 30) bmiCategory = 'Overweight';
+      else bmiCategory = 'Obesity';
+
+      let bmr = 10 * weightKg + 6.25 * heightCm - 5 * age;
+      if (sex === 'male') bmr += 5; else bmr -= 161;
+
+      let activityAdj = 1.0;
+      if (activity === 'aerobic') activityAdj = 1.05;
+      if (activity === 'lifting') activityAdj = 1.08;
+
+      let calories = bmr * multiplier * activityAdj;
+      if (goal === 'lose') calories -= 400;
+      if (goal === 'gain') calories += 300;
+
+      let proteinPerKg = 1.5;
+      if (activity === 'aerobic') proteinPerKg = 1.7;
+      if (activity === 'lifting' || goal === 'gain') proteinPerKg = 1.8;
+
+      const protein = weightKg * proteinPerKg;
+      const fat = (calories * 0.25) / 9;
+      const carbs = Math.max(0, (calories - (protein * 4 + fat * 9)) / 4);
+
+      const activityLabel = document.getElementById('activity').options[document.getElementById('activity').selectedIndex].text;
+      const goalLabel = document.getElementById('goal').options[document.getElementById('goal').selectedIndex].text;
+      const sexLabel = document.getElementById('sex').options[document.getElementById('sex').selectedIndex].text;
+      const frequencyLabel = document.getElementById('frequency').options[document.getElementById('frequency').selectedIndex].text;
+
+      currentTargets = { dailyCalories:calories, goal:goal, currentWeightLbs:weightLbs, protein:protein, fat:fat, carbs:carbs };
+
+      document.getElementById('results').innerHTML = `
+        <p><strong>These are your daily targets based on your inputs.</strong></p>
+        <div>
+          <span class="summary-chip">Age: ${age}</span>
+          <span class="summary-chip">Sex: ${sexLabel}</span>
+          <span class="summary-chip">Activity: ${activityLabel}</span>
+          <span class="summary-chip">Sessions: ${frequencyLabel}</span>
+          <span class="summary-chip">Goal: ${goalLabel}</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <tr><th>Target</th><th>Value</th></tr>
+            <tr><td>Resting Calories (BMR)</td><td>${bmr.toFixed(0)} kcal</td></tr>
+            <tr class="highlight-row"><td>Target Daily Calories</td><td>${calories.toFixed(0)} kcal</td></tr>
+            <tr><td>Target Protein</td><td>${protein.toFixed(1)} g</td></tr>
+            <tr><td>Target Fat</td><td>${fat.toFixed(1)} g</td></tr>
+            <tr><td>Target Carbohydrates</td><td>${carbs.toFixed(1)} g</td></tr>
+          </table>
+        </div>
+        <div class="explain"><strong>Explanation</strong><br>BMR is the estimated energy your body needs at complete rest.<br>Target Daily Calories is your BMR adjusted for activity and then changed for your selected goal.</div>
+      `;
+
+      document.getElementById('bmiTable').innerHTML = `
+        <div class="table-wrap">
+          <table class="${getBmiClass(bmiCategory)}">
+            <tr><th>BMI</th><th>Category</th><th>Reference Healthy Range</th></tr>
+            <tr><td>${bmi.toFixed(1)}</td><td>${bmiCategory}</td><td>18.5 to 24.9</td></tr>
+          </table>
+        </div>
+        <p class="footer-note">BMI is shown as context only and does not directly drive the macro recommendation.</p>
+      `;
+      renderTracker();
+    }
+    function estimateCaloriesBurned(activityKind, minutes, weightLbs) {
+      const weightKg = (weightLbs || 0) * 0.45359237;
+      const metMap = { walking:3.5, aerobic:7.0, weightlifting:6.0 };
+      const met = metMap[activityKind] || 0;
+      return met * 3.5 * weightKg / 200 * minutes;
+    }
+    function addActivityEntry() {
+      const date = document.getElementById('activityDate').value;
+      const name = document.getElementById('activityName').value.trim() || 'Activity';
+      const activityKind = document.getElementById('activityKind').value;
+      const minutes = parseFloat(document.getElementById('activityMinutes').value) || 0;
+      const notes = document.getElementById('activityNotes').value.trim();
+      if (!date) { alert('Please choose a date.'); return; }
+      if (minutes <= 0) { alert('Please enter minutes for an activity entry.'); return; }
+      const baseWeight = parseFloat(document.getElementById('weight').value) || 0;
+      const burned = estimateCaloriesBurned(activityKind, minutes, baseWeight);
+      const entries = getEntries();
+      entries.push({ id:Date.now(), date, entryType:'activity', name, activityKind, minutes, mealCalories:0, protein:0, carbs:0, fat:0, weightEntry:0, burnedCalories:burned, notes });
+      entries.sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id);
+      saveEntries(entries);
+      document.getElementById('activityName').value=''; document.getElementById('activityMinutes').value=''; document.getElementById('activityNotes').value='';
+      syncSelectedDate(date);
+    }
+    function addMealEntry() {
+      const date = document.getElementById('mealDate').value;
+      const name = document.getElementById('mealName').value.trim() || 'Meal';
+      const protein = parseFloat(document.getElementById('mealProtein').value) || 0;
+      const carbs = parseFloat(document.getElementById('mealCarbs').value) || 0;
+      const fat = parseFloat(document.getElementById('mealFat').value) || 0;
+      const notes = document.getElementById('mealNotes').value.trim();
+      const mealCalories = protein * 4 + carbs * 4 + fat * 9;
+      if (!date) { alert('Please choose a date.'); return; }
+      if (protein <= 0 && carbs <= 0 && fat <= 0) { alert('Please enter protein, carbohydrates, fat, or some combination of them for a meal entry.'); return; }
+      const entries = getEntries();
+      entries.push({ id:Date.now(), date, entryType:'meal', name, activityKind:'', minutes:0, mealCalories, protein, carbs, fat, weightEntry:0, burnedCalories:0, notes });
+      entries.sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id);
+      saveEntries(entries);
+      document.getElementById('mealName').value=''; document.getElementById('mealProtein').value=''; document.getElementById('mealCarbs').value=''; document.getElementById('mealFat').value=''; document.getElementById('mealNotes').value='';
+      syncSelectedDate(date);
+    }
+    function addWeightEntry() {
+      const date = document.getElementById('weightDate').value;
+      const weightEntry = parseFloat(document.getElementById('weightEntry').value) || 0;
+      const notes = document.getElementById('weightNotes').value.trim();
+      if (!date) { alert('Please choose a date.'); return; }
+      if (weightEntry <= 0) { alert('Please enter a body weight for a weight check-in.'); return; }
+      const entries = getEntries();
+      entries.push({ id:Date.now(), date, entryType:'weight', name:'Weight Check-In', activityKind:'', minutes:0, mealCalories:0, protein:0, carbs:0, fat:0, weightEntry, burnedCalories:0, notes });
+      entries.sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id);
+      saveEntries(entries);
+      document.getElementById('weightEntry').value=''; document.getElementById('weightNotes').value='';
+      syncSelectedDate(date);
+    }
+    function clearAllEntries() {
+      if (!confirm('Clear all saved entries on this device?')) return;
+      saveEntries([]); renderTracker();
+    }
+    function deleteEntry(id) { saveEntries(getEntries().filter(e => e.id !== id)); renderTracker(); }
+    function getWeekStart(dateStr) {
+      const d = new Date(dateStr + 'T12:00:00');
+      const day = d.getDay(); const diff = (day + 6) % 7; d.setDate(d.getDate() - diff); return isoFromDate(d);
+    }
+    function changeMonth(offset) { currentCalendarDate = new Date(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth() + offset, 1); renderMonthCalendar(); }
+    function renderMonthCalendar() {
+      const grid = document.getElementById('monthGrid');
+      const title = document.getElementById('monthTitle');
+      const entries = getEntries();
+      const year = currentCalendarDate.getFullYear();
+      const month = currentCalendarDate.getMonth();
+      title.textContent = currentCalendarDate.toLocaleString('en-US', { month:'long', year:'numeric' });
+      const first = new Date(year, month, 1);
+      const startDay = (first.getDay() + 6) % 7;
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const daysInPrevMonth = new Date(year, month, 0).getDate();
+      let html = '';
+      ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(name => { html += `<div class="day-name">${name}</div>`; });
+      const cells = [];
+      for (let i=0;i<startDay;i++) { const day = daysInPrevMonth - startDay + i + 1; cells.push({ date:new Date(year, month - 1, day), other:true }); }
+      for (let day=1; day<=daysInMonth; day++) cells.push({ date:new Date(year, month, day), other:false });
+      while (cells.length < 42) { const day = cells.length - (startDay + daysInMonth) + 1; cells.push({ date:new Date(year, month + 1, day), other:true }); }
+      cells.forEach(cell => {
+        const iso = isoFromDate(cell.date);
+        const dayEntries = entries.filter(e => e.date === iso);
+        const activityCount = dayEntries.filter(e => e.entryType === 'activity').length;
+        const mealCount = dayEntries.filter(e => e.entryType === 'meal').length;
+        const weightCount = dayEntries.filter(e => e.entryType === 'weight').length;
+        const selected = iso === selectedDate ? 'selected' : '';
+        const other = cell.other ? 'other-month' : '';
+        html += `<div class="calendar-day ${selected} ${other}" onclick="syncSelectedDate('${iso}')"><div class="day-num">${cell.date.getDate()}</div>${activityCount ? `<span class="calendar-mark mark-activity">${activityCount} activity</span>` : ''}${mealCount ? `<span class="calendar-mark mark-meal">${mealCount} meal</span>` : ''}${weightCount ? `<span class="calendar-mark mark-weight">${weightCount} weight</span>` : ''}</div>`;
+      });
+      grid.innerHTML = html;
+    }
+    function getCoachingMessages(totalProtein, totalCarbs, totalFat, totalCalories) {
+      const messages = [];
+      if (!currentTargets) { messages.push("Use the calculator above first so coaching can compare your daily intake to your targets."); return messages; }
+      const proteinRatio = currentTargets.protein > 0 ? totalProtein / currentTargets.protein : 0;
+      const calorieDiff = totalCalories - currentTargets.dailyCalories;
+      if (proteinRatio < 0.8) messages.push("Protein intake is meaningfully below your daily target. Consider adding a high-protein meal or snack.");
+      else if (proteinRatio <= 1.15) messages.push("Protein intake is close to target. This is a good range for supporting your goal.");
+      else messages.push("Protein intake is above target. That may be fine, but check whether it is crowding out carbs or overall calories.");
+      if (currentTargets.goal === 'gain') {
+        if (proteinRatio < 1.0) messages.push("For muscle gain, raising daily protein toward your target can better support recovery and muscle building.");
+        if (calorieDiff < -150) messages.push("You are currently below your calorie target. A modest calorie surplus is usually more supportive of muscle gain.");
+        else if (calorieDiff <= 250) messages.push("Your calorie intake is near a reasonable muscle-gain range today.");
+        else messages.push("You are well above your calorie target today. That may speed weight gain more than muscle gain.");
+      } else if (currentTargets.goal === 'lose') {
+        if (proteinRatio < 1.0) messages.push("For weight loss, hitting your protein target can help preserve muscle while reducing calories.");
+        if (calorieDiff > 150) messages.push("You are above your calorie target today, which may slow weight loss progress.");
+        else if (calorieDiff >= -400) messages.push("Your calorie intake is in a reasonable range for steady weight loss today.");
+        else messages.push("You are far below your calorie target today. Be careful not to make the deficit too aggressive.");
+      }
+      const carbRatio = currentTargets.carbs > 0 ? totalCarbs / currentTargets.carbs : 0;
+      if (carbRatio < 0.6 && totalCalories > 0) messages.push("Carbohydrate intake is fairly low relative to target. If energy for training feels poor, consider adding carbs around activity.");
+      const fatRatio = currentTargets.fat > 0 ? totalFat / currentTargets.fat : 0;
+      if (fatRatio < 0.5 && totalCalories > 0) messages.push("Fat intake is quite low relative to target. Including some healthy fats may make your diet more balanced.");
+      return messages;
+    }
+    function comparisonRow(label, actual, target, unit) {
+      if (!target || target <= 0) return '';
+      const pct = Math.max(0, Math.min((actual / target) * 100, 100));
+      return `
+        <div class="comparison-row">
+          <div class="comparison-top"><span><strong>${label}</strong></span><span>${actual.toFixed(0)} / ${target.toFixed(0)} ${unit} (${(actual/target*100).toFixed(0)}%)</span></div>
+          <div class="progress-track"><div class="progress-fill" style="width:${pct}%;"></div></div>
+        </div>
+      `;
+    }
+    function renderTracker() {
+      const entries = getEntries();
+      const summaryDate = selectedDate || todayISO();
+      setInputDates(summaryDate);
+      const dailyEntries = entries.filter(e => e.date === summaryDate);
+      const caloriesIn = dailyEntries.filter(e => e.entryType === 'meal').reduce((s,e)=>s+(e.mealCalories||0),0);
+      const caloriesBurned = dailyEntries.filter(e => e.entryType === 'activity').reduce((s,e)=>s+(e.burnedCalories||0),0);
+      const minutes = dailyEntries.filter(e => e.entryType === 'activity').reduce((s,e)=>s+(e.minutes||0),0);
+      const weightLogs = dailyEntries.filter(e => e.entryType === 'weight');
+      const totalProtein = dailyEntries.filter(e => e.entryType === 'meal').reduce((s,e)=>s+(e.protein||0),0);
+      const totalCarbs = dailyEntries.filter(e => e.entryType === 'meal').reduce((s,e)=>s+(e.carbs||0),0);
+      const totalFat = dailyEntries.filter(e => e.entryType === 'meal').reduce((s,e)=>s+(e.fat||0),0);
+
+      let balanceHtml = "<span class='muted'>Calculate your daily target above to compare intake with your target.</span>";
+      if (currentTargets) {
+        const diff = caloriesIn - currentTargets.dailyCalories;
+        let cls = 'good';
+        let msg = `${Math.abs(diff).toFixed(0)} kcal below target`;
+        if (diff > 150) { cls = 'warn'; msg = `${diff.toFixed(0)} kcal above target`; }
+        else if (diff >= -150) { msg = `close to target (${diff.toFixed(0)} kcal difference)`; }
+        balanceHtml = `<span class="${cls}">${msg}</span>`;
+      }
+
+      const coachingMessages = getCoachingMessages(totalProtein, totalCarbs, totalFat, caloriesIn);
+      const comparisonHtml = currentTargets ? `
+        <div class="comparison-box">
+          <strong>Actual vs target</strong>
+          ${comparisonRow('Calories', caloriesIn, currentTargets.dailyCalories, 'kcal')}
+          ${comparisonRow('Protein', totalProtein, currentTargets.protein, 'g')}
+          ${comparisonRow('Carbohydrates', totalCarbs, currentTargets.carbs, 'g')}
+          ${comparisonRow('Fat', totalFat, currentTargets.fat, 'g')}
+        </div>
+      ` : '';
+
+      document.getElementById('dailySummary').innerHTML = `
+        <div class="grid-3">
+          <div class="metric-card">Calories eaten<strong>${caloriesIn.toFixed(0)}</strong></div>
+          <div class="metric-card">Calories burned in activity<strong>${caloriesBurned.toFixed(0)}</strong></div>
+          <div class="metric-card">Minutes of activity<strong>${minutes.toFixed(0)}</strong></div>
+        </div>
+        <div class="grid-3" style="margin-top:16px;">
+          <div class="metric-card">Protein eaten<strong>${totalProtein.toFixed(0)} g</strong></div>
+          <div class="metric-card">Carbohydrates eaten<strong>${totalCarbs.toFixed(0)} g</strong></div>
+          <div class="metric-card">Fat eaten<strong>${totalFat.toFixed(0)} g</strong></div>
+        </div>
+        <div class="explain"><strong>Date:</strong> ${summaryDate}<br><strong>Progress note:</strong> ${balanceHtml}<br><strong>Weight entries today:</strong> ${weightLogs.length ? weightLogs.map(w => `${w.weightEntry} lbs`).join(', ') : 'None'}</div>
+        ${comparisonHtml}
+        <div class="coaching-box"><strong>Basic nutrition coaching</strong><ul>${coachingMessages.map(msg => `<li>${msg}</li>`).join('')}</ul></div>
+      `;
+
+      const weekStart = getWeekStart(summaryDate);
+      const start = new Date(weekStart + 'T12:00:00');
+      const end = new Date(start); end.setDate(end.getDate() + 6);
+      const weekEnd = isoFromDate(end);
+      const weeklyEntries = entries.filter(e => e.date >= weekStart && e.date <= weekEnd);
+      const weeklyCaloriesIn = weeklyEntries.filter(e => e.entryType === 'meal').reduce((s,e)=>s+(e.mealCalories||0),0);
+      const weeklyBurned = weeklyEntries.filter(e => e.entryType === 'activity').reduce((s,e)=>s+(e.burnedCalories||0),0);
+      const weeklyMinutes = weeklyEntries.filter(e => e.entryType === 'activity').reduce((s,e)=>s+(e.minutes||0),0);
+      const weeklyWeightLogs = weeklyEntries.filter(e => e.entryType === 'weight').sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id);
+      const weeklyProtein = weeklyEntries.filter(e => e.entryType === 'meal').reduce((s,e)=>s+(e.protein||0),0);
+      const weeklyCarbs = weeklyEntries.filter(e => e.entryType === 'meal').reduce((s,e)=>s+(e.carbs||0),0);
+      const weeklyFat = weeklyEntries.filter(e => e.entryType === 'meal').reduce((s,e)=>s+(e.fat||0),0);
+
+      let progressText = "Add at least two weight check-ins in the same week to see weight-change progress.";
+      if (weeklyWeightLogs.length >= 2) {
+        const startWeight = weeklyWeightLogs[0].weightEntry;
+        const endWeight = weeklyWeightLogs[weeklyWeightLogs.length - 1].weightEntry;
+        const delta = endWeight - startWeight;
+        if (Math.abs(delta) < 0.1) progressText = "Weight is essentially unchanged this week.";
+        else if (delta < 0) progressText = `${Math.abs(delta).toFixed(1)} lbs lost this week.`;
+        else progressText = `${delta.toFixed(1)} lbs gained this week.`;
+      }
+      let goalHint = "";
+      if (currentTargets) {
+        goalHint = currentTargets.goal === 'lose' ? "For a weight-loss goal, a modest calorie deficit over time is usually the intended direction." : "For a muscle-gain goal, a modest calorie surplus plus strength training is usually the intended direction.";
+      }
+      document.getElementById('weeklySummary').innerHTML = `
+        <div class="grid-3">
+          <div class="metric-card">Weekly meal calories<strong>${weeklyCaloriesIn.toFixed(0)}</strong></div>
+          <div class="metric-card">Weekly activity calories burned<strong>${weeklyBurned.toFixed(0)}</strong></div>
+          <div class="metric-card">Weekly activity minutes<strong>${weeklyMinutes.toFixed(0)}</strong></div>
+        </div>
+        <div class="grid-3" style="margin-top:16px;">
+          <div class="metric-card">Weekly protein<strong>${weeklyProtein.toFixed(0)} g</strong></div>
+          <div class="metric-card">Weekly carbs<strong>${weeklyCarbs.toFixed(0)} g</strong></div>
+          <div class="metric-card">Weekly fat<strong>${weeklyFat.toFixed(0)} g</strong></div>
+        </div>
+        <div class="explain"><strong>Week:</strong> ${weekStart} to ${weekEnd}<br><strong>Weight trend:</strong> ${progressText}<br><strong>Goal context:</strong> ${goalHint || 'Calculate your target above to connect weekly progress to your goal.'}</div>
+      `;
+
+      if (!entries.length) {
+        document.getElementById('entriesTable').innerHTML = "<p class='muted'>No entries yet.</p>";
+      } else {
+        document.getElementById('entriesTable').innerHTML = `
+          <div class="table-wrap">
+            <table class="calendar-table">
+              <tr><th>Date</th><th>Type</th><th>Name</th><th>Minutes</th><th>Calories</th><th>Protein</th><th>Carbs</th><th>Fat</th><th>Calories Burned</th><th>Weight</th><th>Notes</th><th>Action</th></tr>
+              ${entries.map(e => `
+                <tr>
+                  <td>${e.date}</td>
+                  <td>${e.entryType === 'weight' ? 'Weight Check-In' : e.entryType.charAt(0).toUpperCase() + e.entryType.slice(1)}</td>
+                  <td>${e.name}${e.entryType === 'activity' ? ` (${e.activityKind})` : ''}</td>
+                  <td>${e.minutes ? e.minutes.toFixed(0) : '-'}</td>
+                  <td>${e.mealCalories ? e.mealCalories.toFixed(0) : '-'}</td>
+                  <td>${e.protein ? e.protein.toFixed(0) + ' g' : '-'}</td>
+                  <td>${e.carbs ? e.carbs.toFixed(0) + ' g' : '-'}</td>
+                  <td>${e.fat ? e.fat.toFixed(0) + ' g' : '-'}</td>
+                  <td>${e.burnedCalories ? e.burnedCalories.toFixed(0) : '-'}</td>
+                  <td>${e.weightEntry ? e.weightEntry.toFixed(1) + ' lbs' : '-'}</td>
+                  <td>${e.notes || '-'}</td>
+                  <td><button class="ghost small-btn" onclick="deleteEntry(${e.id})">Delete</button></td>
+                </tr>
+              `).join('')}
+            </table>
+          </div>
+        `;
+      }
+      renderMonthCalendar();
+    }
+    function renderMonthCalendar() {
+      const grid = document.getElementById('monthGrid');
+      const title = document.getElementById('monthTitle');
+      const entries = getEntries();
+      const year = currentCalendarDate.getFullYear();
+      const month = currentCalendarDate.getMonth();
+      title.textContent = currentCalendarDate.toLocaleString('en-US', { month:'long', year:'numeric' });
+      const first = new Date(year, month, 1);
+      const startDay = (first.getDay() + 6) % 7;
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const daysInPrevMonth = new Date(year, month, 0).getDate();
+      let html = '';
+      ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(name => { html += `<div class="day-name">${name}</div>`; });
+      const cells = [];
+      for (let i=0;i<startDay;i++) { const day = daysInPrevMonth - startDay + i + 1; cells.push({ date:new Date(year, month - 1, day), other:true }); }
+      for (let day=1; day<=daysInMonth; day++) cells.push({ date:new Date(year, month, day), other:false });
+      while (cells.length < 42) { const day = cells.length - (startDay + daysInMonth) + 1; cells.push({ date:new Date(year, month + 1, day), other:true }); }
+      cells.forEach(cell => {
+        const iso = isoFromDate(cell.date);
+        const dayEntries = entries.filter(e => e.date === iso);
+        const activityCount = dayEntries.filter(e => e.entryType === 'activity').length;
+        const mealCount = dayEntries.filter(e => e.entryType === 'meal').length;
+        const weightCount = dayEntries.filter(e => e.entryType === 'weight').length;
+        const selected = iso === selectedDate ? 'selected' : '';
+        const other = cell.other ? 'other-month' : '';
+        html += `<div class="calendar-day ${selected} ${other}" onclick="syncSelectedDate('${iso}')"><div class="day-num">${cell.date.getDate()}</div>${activityCount ? `<span class="calendar-mark mark-activity">${activityCount} activity</span>` : ''}${mealCount ? `<span class="calendar-mark mark-meal">${mealCount} meal</span>` : ''}${weightCount ? `<span class="calendar-mark mark-weight">${weightCount} weight</span>` : ''}</div>`;
+      });
+      grid.innerHTML = html;
+    }
+    selectedDate = todayISO();
+    currentCalendarDate = new Date();
+    setInputDates(selectedDate);
+    renderTracker();
+  </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Health and Fitness Tracker</title>
   <style>
     :root {
