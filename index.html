@@ -69,15 +69,38 @@
     .food-builder { margin-top:14px; padding:14px; border-radius:12px; background:#fafcff; border:1px solid #dde7f3; }
     .food-row { display:grid; grid-template-columns:2fr 1fr auto; gap:10px; align-items:end; margin-top:10px; }
     .food-summary { margin-top:10px; font-size:0.95rem; color:var(--muted); }
+    .account-status { margin-top:10px; padding:12px; border-radius:12px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; }
+    .warning-box { margin-top:14px; padding:14px; border-radius:12px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; }
     @media (max-width:700px) { .food-row { grid-template-columns:1fr; } }
     @media (max-width:920px) { .grid, .form-grid, .grid-3 { grid-template-columns:1fr; } .container { padding:20px 14px 40px; } .hero h1 { font-size:1.6rem; } .calendar-day { min-height:90px; } }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <div class="container">
     <section class="hero">
       <h1>Health Tracker</h1>
       <p>Enter your information below to estimate daily calories and protein, fat, and carbohydrate targets. Then use the activity and meal tracker to log daily entries, estimate calorie balance, and review weekly progress. This calculator is for general educational use for adults and is not a substitute for individualized medical or nutrition advice.</p>
+    </section>
+
+    <section class="card" style="margin-bottom:22px;">
+      <h2>Account and Cloud Storage</h2>
+      <p class="muted">
+        This version is prepared for cloud accounts and long-term storage, but login will only work after you create a Supabase project and replace the placeholder values in the code.
+      </p>
+      <div class="form-grid">
+        <div class="field"><label for="accountEmail">Email</label><input type="email" id="accountEmail" placeholder="name@example.com"></div>
+        <div class="field"><label for="accountPassword">Password</label><input type="password" id="accountPassword" placeholder="Password"></div>
+      </div>
+      <div class="button-row">
+        <button onclick="signUp()">Create Account</button>
+        <button class="secondary" onclick="signIn()">Sign In</button>
+        <button class="ghost" onclick="signOut()">Sign Out</button>
+        <button class="ghost" onclick="saveEntriesToCloud()">Save Entries to Cloud</button>
+        <button class="ghost" onclick="loadEntriesFromCloud()">Load Entries from Cloud</button>
+      </div>
+      <div id="accountStatus" class="account-status">Cloud login is not configured yet. Local browser storage still works.</div>
+      <div class="warning-box"><strong>Setup note:</strong> Do not build your own password system in this file. Use a service such as Supabase or Firebase so passwords are handled securely.</div>
     </section>
 
     <div class="grid">
@@ -223,6 +246,10 @@
     let selectedDate = todayISO();
     let currentCalendarDate = new Date();
     let currentMealFoods = [];
+    const SUPABASE_URL = 'REPLACE_WITH_YOUR_SUPABASE_URL';
+    const SUPABASE_ANON_KEY = 'REPLACE_WITH_YOUR_SUPABASE_ANON_KEY';
+    const cloudConfigured = SUPABASE_URL !== 'REPLACE_WITH_YOUR_SUPABASE_URL' && SUPABASE_ANON_KEY !== 'REPLACE_WITH_YOUR_SUPABASE_ANON_KEY';
+    const supabaseClient = cloudConfigured ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
     const BASE_FOOD_LIBRARY = [
       { name:'Chicken breast', serving:'typical 5 oz cooked portion', protein:43, carbs:0, fat:5 },
       { name:'Greek yogurt, nonfat, no added sugar', serving:'5.3 oz container', protein:15, carbs:6, fat:0 },
@@ -234,6 +261,8 @@
       { name:'Toast', serving:'1 slice', protein:3, carbs:15, fat:1 },
       { name:'Mixed nuts', serving:'1 oz', protein:5, carbs:6, fat:14 },
       { name:'Peanut butter', serving:'1 oz', protein:7, carbs:6, fat:14 },
+      { name:'Honey', serving:'1 teaspoon', protein:0, carbs:6, fat:0 },
+      { name:'Sugar', serving:'1 teaspoon', protein:0, carbs:4, fat:0 },
       { name:'Oats', serving:'1/2 cup dry', protein:5, carbs:27, fat:3 },
       { name:'Banana', serving:'1 medium', protein:1, carbs:27, fat:0 },
       { name:'Black beans', serving:'1/2 cup cooked', protein:8, carbs:20, fat:1 },
@@ -383,6 +412,81 @@
       saveEntries(entries);
       document.getElementById('activityName').value=''; document.getElementById('activityMinutes').value=''; document.getElementById('activityNotes').value='';
       syncSelectedDate(date);
+    }
+
+
+    function setAccountStatus(message) {
+      const el = document.getElementById('accountStatus');
+      if (el) el.textContent = message;
+    }
+
+    function requireCloudConfig() {
+      if (!cloudConfigured || !supabaseClient) {
+        setAccountStatus('Cloud login is not configured yet. Replace the Supabase URL and anon key placeholders in the code first.');
+        return false;
+      }
+      return true;
+    }
+
+    async function signUp() {
+      if (!requireCloudConfig()) return;
+      const email = document.getElementById('accountEmail').value.trim();
+      const password = document.getElementById('accountPassword').value;
+      const result = await supabaseClient.auth.signUp({ email: email, password: password });
+      if (result.error) setAccountStatus('Sign up error: ' + result.error.message);
+      else setAccountStatus('Account created. Check your email if confirmation is required.');
+    }
+
+    async function signIn() {
+      if (!requireCloudConfig()) return;
+      const email = document.getElementById('accountEmail').value.trim();
+      const password = document.getElementById('accountPassword').value;
+      const result = await supabaseClient.auth.signInWithPassword({ email: email, password: password });
+      if (result.error) setAccountStatus('Sign in error: ' + result.error.message);
+      else setAccountStatus('Signed in. You can now save or load entries from cloud storage.');
+    }
+
+    async function signOut() {
+      if (!requireCloudConfig()) return;
+      await supabaseClient.auth.signOut();
+      setAccountStatus('Signed out.');
+    }
+
+    async function saveEntriesToCloud() {
+      if (!requireCloudConfig()) return;
+      const sessionResult = await supabaseClient.auth.getSession();
+      const user = sessionResult.data && sessionResult.data.session && sessionResult.data.session.user;
+      if (!user) {
+        setAccountStatus('Please sign in before saving to cloud storage.');
+        return;
+      }
+      const result = await supabaseClient
+        .from('health_tracker_entries')
+        .upsert({ user_id: user.id, entries: getEntries(), updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+      if (result.error) setAccountStatus('Cloud save error: ' + result.error.message);
+      else setAccountStatus('Entries saved to cloud storage.');
+    }
+
+    async function loadEntriesFromCloud() {
+      if (!requireCloudConfig()) return;
+      const sessionResult = await supabaseClient.auth.getSession();
+      const user = sessionResult.data && sessionResult.data.session && sessionResult.data.session.user;
+      if (!user) {
+        setAccountStatus('Please sign in before loading from cloud storage.');
+        return;
+      }
+      const result = await supabaseClient
+        .from('health_tracker_entries')
+        .select('entries')
+        .eq('user_id', user.id)
+        .single();
+      if (result.error) {
+        setAccountStatus('Cloud load error: ' + result.error.message);
+        return;
+      }
+      saveEntries(result.data.entries || []);
+      renderTracker();
+      setAccountStatus('Entries loaded from cloud storage.');
     }
 
     function getFoodLibrary() {
@@ -761,5 +865,35 @@
     });
     renderTracker();
   </script>
+
+    <!--
+      Supabase setup needed for real cloud login/storage:
+
+      1. Create a Supabase project.
+      2. Replace SUPABASE_URL and SUPABASE_ANON_KEY above with your project values.
+      3. In Supabase SQL editor, create this table:
+
+      create table health_tracker_entries (
+        user_id uuid primary key references auth.users(id) on delete cascade,
+        entries jsonb not null default '[]'::jsonb,
+        updated_at timestamptz default now()
+      );
+
+      alter table health_tracker_entries enable row level security;
+
+      create policy "Users can read own health tracker entries"
+      on health_tracker_entries for select
+      using (auth.uid() = user_id);
+
+      create policy "Users can insert own health tracker entries"
+      on health_tracker_entries for insert
+      with check (auth.uid() = user_id);
+
+      create policy "Users can update own health tracker entries"
+      on health_tracker_entries for update
+      using (auth.uid() = user_id)
+      with check (auth.uid() = user_id);
+    -->
+
 </body>
 </html>
