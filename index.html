@@ -251,9 +251,9 @@
     let selectedDate = todayISO();
     let currentCalendarDate = new Date();
 
-const SUPABASE_URL = 'https://mwyniscrbxzervmywaxr.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_KeX87tE5sON8doiFIF2gkg_hROzlr0d';
-    const cloudConfigured = SUPABASE_URL !== 'REPLACE_WITH_YOUR_SUPABASE_URL' && SUPABASE_ANON_KEY !== 'REPLACE_WITH_YOUR_SUPABASE_ANON_KEY';
+    const SUPABASE_URL = 'https://mwyniscrbxzervmywaxr.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_KeX87tE5sON8doiFIF2gkg_hROzlr0d';
+    const cloudConfigured = SUPABASE_URL.startsWith('https://') && SUPABASE_ANON_KEY.length > 20;
     const supabaseClient = cloudConfigured ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
     let currentMealFoods = [];
     const BASE_FOOD_LIBRARY = [
@@ -431,7 +431,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_KeX87tE5sON8doiFIF2gkg_hROzlr0d';
 
     function requireCloudConfig() {
       if (!cloudConfigured || !supabaseClient) {
-        setAccountStatus('Cloud login is not configured yet. Replace the Supabase URL and anon key placeholders in the code first.');
+        setAccountStatus('Cloud login is not configured. Please check the Supabase URL and publishable key in the code.');
         return false;
       }
       return true;
