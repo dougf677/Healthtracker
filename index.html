@@ -253,8 +253,8 @@
     let selectedDate = todayISO();
     let currentCalendarDate = new Date();
 
-    const SUPABASE_URL = 'REPLACE_WITH_YOUR_SUPABASE_URL';
-    const SUPABASE_ANON_KEY = 'REPLACE_WITH_YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_URL = 'https://mwyniscrbxzervmywaxr.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_KeX87tE5sON8doiFIF2gkg_hROzlr0d';
     const cloudConfigured = SUPABASE_URL !== 'REPLACE_WITH_YOUR_SUPABASE_URL' && SUPABASE_ANON_KEY !== 'REPLACE_WITH_YOUR_SUPABASE_ANON_KEY';
     const supabaseClient = cloudConfigured ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
     let currentMealFoods = [];
