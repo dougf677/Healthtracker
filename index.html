@@ -208,6 +208,7 @@
             <div class="field"><label for="customFoodFat">Fat (g)</label><input type="number" id="customFoodFat" min="0" step="0.1"></div>
           </div>
           <div class="button-row"><button class="ghost small-btn" type="button" onclick="addCustomFood()">Add Custom Food</button></div>
+          <div class="food-summary" id="customFoodList">No custom foods added yet.</div>
         </div>
         <div class="form-grid" style="margin-top:14px;">
           <div class="field"><label for="mealProtein">Manual Protein (g)</label><input type="number" id="mealProtein" min="0" step="1" placeholder="Optional"></div>
@@ -239,11 +240,11 @@
       </section>
     </div>
 
-    <div class="grid" style="margin-top:22px;">
-      <section class="card"><h2>Weekly Progress</h2><div id="weeklySummary"><p class="muted">Weekly progress will appear after you add dated entries.</p></div></section>
-      <section class="card"><h2>Logged Entries</h2><div id="entriesTable"><p class="muted">No entries yet.</p></div></section>
-    </div>
-  </div>
+    <section class="card" style="margin-top:22px;">
+      <h2>Weekly Progress</h2>
+      <div id="weeklySummary"><p class="muted">Weekly progress will appear after you add dated entries.</p></div>
+    </section>
+  <div id="entriesTable" style="display:none;"></div>
 
   <script>
     const STORAGE_KEY = 'healthTrackerEntriesV5';
@@ -468,6 +469,7 @@
         cloudSignedIn = true;
         setAccountStatus('Signed in. Loading entries from cloud storage...');
         await loadEntriesFromCloud();
+        await loadCustomFoodsFromCloud();
       }
     }
 
@@ -544,6 +546,49 @@
       autoSaveEntriesToCloud();
     }
 
+
+    async function saveCustomFoodsToCloud() {
+      if (!cloudConfigured || !supabaseClient) return;
+      const sessionResult = await supabaseClient.auth.getSession();
+      const user = sessionResult.data && sessionResult.data.session && sessionResult.data.session.user;
+      if (!user) return;
+
+      const customFoods = JSON.parse(localStorage.getItem('customFoodLibraryV1') || '[]');
+      const result = await supabaseClient
+        .from('health_tracker_custom_foods')
+        .upsert({ user_id: user.id, foods: customFoods, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+
+      if (result.error) {
+        setAccountStatus('Custom food cloud save error: ' + result.error.message);
+      } else {
+        setAccountStatus('Custom foods auto-saved to cloud.');
+      }
+    }
+
+    async function loadCustomFoodsFromCloud() {
+      if (!cloudConfigured || !supabaseClient) return;
+      const sessionResult = await supabaseClient.auth.getSession();
+      const user = sessionResult.data && sessionResult.data.session && sessionResult.data.session.user;
+      if (!user) return;
+
+      const result = await supabaseClient
+        .from('health_tracker_custom_foods')
+        .select('foods')
+        .eq('user_id', user.id)
+        .single();
+
+      if (result.error) {
+        if (result.error.code !== 'PGRST116') {
+          setAccountStatus('Custom food cloud load error: ' + result.error.message);
+        }
+        return;
+      }
+
+      localStorage.setItem('customFoodLibraryV1', JSON.stringify(result.data.foods || []));
+      populateFoodSelect();
+      renderCustomFoodList();
+    }
+
     function getFoodLibrary() {
       try {
         const custom = JSON.parse(localStorage.getItem('customFoodLibraryV1') || '[]');
@@ -556,6 +601,34 @@
       const custom = JSON.parse(localStorage.getItem('customFoodLibraryV1') || '[]');
       custom.push(item);
       localStorage.setItem('customFoodLibraryV1', JSON.stringify(custom));
+      renderCustomFoodList();
+      saveCustomFoodsToCloud();
+    }
+
+    function deleteCustomFood(index) {
+      if (!requireSignedInForChanges()) return;
+      const custom = JSON.parse(localStorage.getItem('customFoodLibraryV1') || '[]');
+      custom.splice(index, 1);
+      localStorage.setItem('customFoodLibraryV1', JSON.stringify(custom));
+      populateFoodSelect();
+      renderCustomFoodList();
+      saveCustomFoodsToCloud();
+    }
+
+    function renderCustomFoodList() {
+      const container = document.getElementById('customFoodList');
+      if (!container) return;
+
+      const custom = JSON.parse(localStorage.getItem('customFoodLibraryV1') || '[]');
+      if (!custom.length) {
+        container.innerHTML = 'No custom foods added yet.';
+        return;
+      }
+
+      container.innerHTML = '<strong>Custom foods:</strong><ul>' + custom.map((food, index) => {
+        const calories = food.protein * 4 + food.carbs * 4 + food.fat * 9;
+        return `<li>${food.name} (${food.serving}) - P ${food.protein}g / C ${food.carbs}g / F ${food.fat}g / ${calories.toFixed(0)} kcal <button class="ghost small-btn" type="button" onclick="deleteCustomFood(${index})">Delete</button></li>`;
+      }).join('') + '</ul>';
     }
     function populateFoodSelect() {
       const select = document.getElementById('foodSelect');
@@ -629,6 +702,7 @@
       renderMealFoodList();
     }
     function addCustomFood() {
+      if (!requireSignedInForChanges()) return;
       const name = document.getElementById('customFoodName').value.trim();
       const serving = document.getElementById('customFoodServing').value.trim() || '1 serving';
       const protein = parseFloat(document.getElementById('customFoodProtein').value) || 0;
@@ -643,7 +717,8 @@
       document.getElementById('customFoodCarbs').value = '';
       document.getElementById('customFoodFat').value = '';
       populateFoodSelect();
-      alert('Custom food added to the reference table on this device.');
+      renderCustomFoodList();
+      alert('Custom food added to your food reference table.');
     }
 
     function addMealEntry() {
@@ -887,33 +962,8 @@
         <div class="explain"><strong>Week:</strong> ${weekStart} to ${weekEnd}<br><strong>Weight trend:</strong> ${progressText}<br><strong>Goal context:</strong> ${goalHint || 'Calculate your target above to connect weekly progress to your goal.'}</div>
       `;
 
-      if (!entries.length) {
-        document.getElementById('entriesTable').innerHTML = "<p class='muted'>No entries yet.</p>";
-      } else {
-        document.getElementById('entriesTable').innerHTML = `
-          <div class="table-wrap">
-            <table class="calendar-table">
-              <tr><th>Date</th><th>Type</th><th>Name</th><th>Minutes</th><th>Calories</th><th>Protein</th><th>Carbs</th><th>Fat</th><th>Calories Burned</th><th>Weight</th><th>Notes</th><th>Action</th></tr>
-              ${entries.map(e => `
-                <tr>
-                  <td>${e.date}</td>
-                  <td>${e.entryType === 'weight' ? 'Weight Check-In' : e.entryType.charAt(0).toUpperCase() + e.entryType.slice(1)}</td>
-                  <td>${e.name}${e.entryType === 'activity' ? ` (${e.activityKind})` : ''}</td>
-                  <td>${e.minutes ? e.minutes.toFixed(0) : '-'}</td>
-                  <td>${e.mealCalories ? e.mealCalories.toFixed(0) : '-'}</td>
-                  <td>${e.protein ? e.protein.toFixed(0) + ' g' : '-'}</td>
-                  <td>${e.carbs ? e.carbs.toFixed(0) + ' g' : '-'}</td>
-                  <td>${e.fat ? e.fat.toFixed(0) + ' g' : '-'}</td>
-                  <td>${e.burnedCalories ? e.burnedCalories.toFixed(0) : '-'}</td>
-                  <td>${e.weightEntry ? e.weightEntry.toFixed(1) + ' lbs' : '-'}</td>
-                  <td>${e.notes || '-'}</td>
-                  <td><button class="small-btn delete-btn" onclick="deleteEntry(${e.id}); renderTracker();">Delete Entry</button></td>
-                </tr>
-              `).join('')}
-            </table>
-          </div>
-        `;
-      }
+      const entriesTable = document.getElementById('entriesTable');
+      if (entriesTable) entriesTable.innerHTML = '';
       renderMonthCalendar();
       renderSelectedDayEntries();
     }
@@ -950,6 +1000,7 @@
     currentCalendarDate = new Date();
     setInputDates(selectedDate);
     populateFoodSelect();
+    renderCustomFoodList();
     renderMealFoodList();
     ['mealProtein','mealCarbs','mealFat'].forEach(id => {
       const el = document.getElementById(id);
@@ -963,12 +1014,39 @@
           cloudSignedIn = true;
           setAccountStatus('Signed in. Loading entries from cloud storage...');
           loadEntriesFromCloud();
+          loadCustomFoodsFromCloud();
         }
       });
     }
   </script>
 
 
+
+
+    <!--
+      Additional Supabase table needed for custom foods:
+
+      create table health_tracker_custom_foods (
+        user_id uuid primary key references auth.users(id) on delete cascade,
+        foods jsonb not null default '[]'::jsonb,
+        updated_at timestamptz default now()
+      );
+
+      alter table health_tracker_custom_foods enable row level security;
+
+      create policy "Users can read own custom foods"
+      on health_tracker_custom_foods for select
+      using (auth.uid() = user_id);
+
+      create policy "Users can insert own custom foods"
+      on health_tracker_custom_foods for insert
+      with check (auth.uid() = user_id);
+
+      create policy "Users can update own custom foods"
+      on health_tracker_custom_foods for update
+      using (auth.uid() = user_id)
+      with check (auth.uid() = user_id);
+    -->
 
 </body>
 </html>
