@@ -196,7 +196,10 @@
             <button class="secondary" type="button" onclick="addSelectedFoodToMeal()">Add Food</button>
           </div>
           <div id="mealFoodList" class="food-summary">No food items added to this meal yet.</div>
-          <div class="button-row"><button class="ghost small-btn" type="button" onclick="clearMealFoods()">Clear Meal Foods</button></div>
+          <div class="button-row">
+            <button class="ghost small-btn" type="button" onclick="clearMealFoods()">Clear Meal Foods</button>
+            <button class="ghost small-btn" type="button" id="deleteSelectedCustomFoodBtn" onclick="deleteSelectedCustomFood()" style="display:none;">Delete Selected Custom Food</button>
+          </div>
         </div>
         <div class="food-builder">
           <h3>Add Custom Food to Reference Table</h3>
@@ -208,7 +211,6 @@
             <div class="field"><label for="customFoodFat">Fat (g)</label><input type="number" id="customFoodFat" min="0" step="0.1"></div>
           </div>
           <div class="button-row"><button class="ghost small-btn" type="button" onclick="addCustomFood()">Add Custom Food</button></div>
-          <div class="food-summary" id="customFoodList">No custom foods added yet.</div>
         </div>
         <div class="form-grid" style="margin-top:14px;">
           <div class="field"><label for="mealProtein">Manual Protein (g)</label><input type="number" id="mealProtein" min="0" step="1" placeholder="Optional"></div>
@@ -586,58 +588,100 @@
 
       localStorage.setItem('customFoodLibraryV1', JSON.stringify(result.data.foods || []));
       populateFoodSelect();
-      renderCustomFoodList();
     }
 
     function getFoodLibrary() {
+      let custom = [];
       try {
-        const custom = JSON.parse(localStorage.getItem('customFoodLibraryV1') || '[]');
-        return BASE_FOOD_LIBRARY.concat(custom);
+        custom = JSON.parse(localStorage.getItem('customFoodLibraryV1') || '[]');
       } catch (e) {
-        return BASE_FOOD_LIBRARY;
+        custom = [];
       }
+
+      const baseFoods = BASE_FOOD_LIBRARY.map((food, index) => ({
+        ...food,
+        source: 'base',
+        customIndex: null,
+        displayGroup: 'Standard foods'
+      }));
+
+      const customFoods = custom.map((food, index) => ({
+        ...food,
+        source: 'custom',
+        customIndex: index,
+        displayGroup: 'Custom foods'
+      }));
+
+      return baseFoods.concat(customFoods);
     }
     function saveCustomFood(item) {
       const custom = JSON.parse(localStorage.getItem('customFoodLibraryV1') || '[]');
       custom.push(item);
       localStorage.setItem('customFoodLibraryV1', JSON.stringify(custom));
-      renderCustomFoodList();
-      saveCustomFoodsToCloud();
-    }
-
-    function deleteCustomFood(index) {
-      if (!requireSignedInForChanges()) return;
-      const custom = JSON.parse(localStorage.getItem('customFoodLibraryV1') || '[]');
-      custom.splice(index, 1);
-      localStorage.setItem('customFoodLibraryV1', JSON.stringify(custom));
       populateFoodSelect();
-      renderCustomFoodList();
       saveCustomFoodsToCloud();
     }
 
-    function renderCustomFoodList() {
-      const container = document.getElementById('customFoodList');
-      if (!container) return;
+    function updateSelectedFoodControls() {
+      const select = document.getElementById('foodSelect');
+      const deleteButton = document.getElementById('deleteSelectedCustomFoodBtn');
+      if (!select || !deleteButton) return;
 
-      const custom = JSON.parse(localStorage.getItem('customFoodLibraryV1') || '[]');
-      if (!custom.length) {
-        container.innerHTML = 'No custom foods added yet.';
+      const foods = getFoodLibrary();
+      const selectedFood = foods[parseInt(select.value, 10)];
+      deleteButton.style.display = selectedFood && selectedFood.source === 'custom' ? 'inline-block' : 'none';
+    }
+
+    function deleteSelectedCustomFood() {
+      if (!requireSignedInForChanges()) return;
+
+      const select = document.getElementById('foodSelect');
+      const foods = getFoodLibrary();
+      const selectedFood = foods[parseInt(select.value, 10)];
+
+      if (!selectedFood || selectedFood.source !== 'custom') {
+        alert('Please select a custom food to delete.');
         return;
       }
 
-      container.innerHTML = '<strong>Custom foods:</strong><ul>' + custom.map((food, index) => {
-        const calories = food.protein * 4 + food.carbs * 4 + food.fat * 9;
-        return `<li>${food.name} (${food.serving}) - P ${food.protein}g / C ${food.carbs}g / F ${food.fat}g / ${calories.toFixed(0)} kcal <button class="ghost small-btn" type="button" onclick="deleteCustomFood(${index})">Delete</button></li>`;
-      }).join('') + '</ul>';
+      if (!confirm(`Delete custom food "${selectedFood.name}"?`)) return;
+
+      const custom = JSON.parse(localStorage.getItem('customFoodLibraryV1') || '[]');
+      custom.splice(selectedFood.customIndex, 1);
+      localStorage.setItem('customFoodLibraryV1', JSON.stringify(custom));
+      populateFoodSelect();
+      saveCustomFoodsToCloud();
     }
+
     function populateFoodSelect() {
       const select = document.getElementById('foodSelect');
       if (!select) return;
       const foods = getFoodLibrary();
-      select.innerHTML = foods.map((food, index) => {
-        const calories = food.protein * 4 + food.carbs * 4 + food.fat * 9;
-        return `<option value="${index}">${food.name} (${food.serving}) - P ${food.protein}g / C ${food.carbs}g / F ${food.fat}g / ${calories.toFixed(0)} kcal</option>`;
-      }).join('');
+
+      const standardOptions = foods
+        .map((food, index) => ({ food, index }))
+        .filter(item => item.food.source === 'base')
+        .map(item => {
+          const food = item.food;
+          const calories = food.protein * 4 + food.carbs * 4 + food.fat * 9;
+          return `<option value="${item.index}">${food.name} (${food.serving}) - P ${food.protein}g / C ${food.carbs}g / F ${food.fat}g / ${calories.toFixed(0)} kcal</option>`;
+        }).join('');
+
+      const customOptions = foods
+        .map((food, index) => ({ food, index }))
+        .filter(item => item.food.source === 'custom')
+        .map(item => {
+          const food = item.food;
+          const calories = food.protein * 4 + food.carbs * 4 + food.fat * 9;
+          return `<option value="${item.index}">${food.name} (${food.serving}) - P ${food.protein}g / C ${food.carbs}g / F ${food.fat}g / ${calories.toFixed(0)} kcal</option>`;
+        }).join('');
+
+      select.innerHTML = `
+        <optgroup label="Standard foods">${standardOptions}</optgroup>
+        <optgroup label="Custom foods">${customOptions || '<option disabled>No custom foods yet</option>'}</optgroup>
+      `;
+
+      updateSelectedFoodControls();
     }
     function getManualMealMacros() {
       return {
@@ -717,7 +761,6 @@
       document.getElementById('customFoodCarbs').value = '';
       document.getElementById('customFoodFat').value = '';
       populateFoodSelect();
-      renderCustomFoodList();
       alert('Custom food added to your food reference table.');
     }
 
